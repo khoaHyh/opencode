@@ -36,6 +36,7 @@ import { ArgsProvider, useArgs, type Args } from "./context/args"
 import open from "open"
 import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
+import { Changes } from "./routes/changes"
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -223,8 +224,17 @@ function App() {
       return
     }
 
-    if (route.data.type === "session") {
-      const session = sync.session.get(route.data.sessionID)
+    if (route.data.type === "session" || route.data.type === "changes") {
+      if (route.data.type === "changes" && !route.data.sessionID) {
+        renderer.setTerminalTitle("OC | changes")
+        return
+      }
+      const sessionID = route.data.sessionID
+      if (!sessionID) {
+        renderer.setTerminalTitle("OpenCode")
+        return
+      }
+      const session = sync.session.get(sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
         renderer.setTerminalTitle("OpenCode")
         return
@@ -232,7 +242,7 @@ function App() {
 
       // Truncate title to 40 chars max
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`OC | ${title}`)
+      renderer.setTerminalTitle(route.data.type === "changes" ? `OC | changes | ${title}` : `OC | ${title}`)
     }
   })
 
@@ -343,6 +353,28 @@ function App() {
         route.navigate({
           type: "home",
           initialPrompt: currentPrompt,
+        })
+        dialog.clear()
+      },
+    },
+    {
+      title: "View changes",
+      value: "changes.open",
+      category: "Session",
+      suggested: route.data.type === "session" || route.data.type === "home",
+      slash: {
+        name: "changes",
+      },
+      onSelect: (dialog) => {
+        const sessionID =
+          route.data.type === "session"
+            ? route.data.sessionID
+            : route.data.type === "changes"
+              ? route.data.sessionID
+              : undefined
+        route.navigate({
+          type: "changes",
+          sessionID,
         })
         dialog.clear()
       },
@@ -647,7 +679,10 @@ function App() {
   })
 
   sdk.event.on(SessionApi.Event.Deleted.type, (evt) => {
-    if (route.data.type === "session" && route.data.sessionID === evt.properties.info.id) {
+    if (
+      (route.data.type === "session" || route.data.type === "changes") &&
+      route.data.sessionID === evt.properties.info.id
+    ) {
       route.navigate({ type: "home" })
       toast.show({
         variant: "info",
@@ -712,6 +747,9 @@ function App() {
         </Match>
         <Match when={route.data.type === "session"}>
           <Session />
+        </Match>
+        <Match when={route.data.type === "changes"}>
+          <Changes />
         </Match>
       </Switch>
     </box>

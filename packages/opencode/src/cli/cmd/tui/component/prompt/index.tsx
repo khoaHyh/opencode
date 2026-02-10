@@ -521,6 +521,24 @@ export function Prompt(props: PromptProps) {
       exit()
       return
     }
+
+    if (trimmed.startsWith("/")) {
+      const slash = trimmed.split(/\s+/)[0]
+      const local = command.slashes().find((item) => item.display === slash || item.aliases?.includes(slash))
+
+      if (local) {
+        local.onSelect()
+        input.extmarks.clear()
+        setStore("prompt", {
+          input: "",
+          parts: [],
+        })
+        setStore("extmarkToPartIndex", new Map())
+        input.clear()
+        return
+      }
+    }
+
     const selectedModel = local.model.current()
     if (!selectedModel) {
       promptModelWarning()

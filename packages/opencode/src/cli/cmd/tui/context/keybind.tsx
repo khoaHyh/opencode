@@ -7,6 +7,7 @@ import type { ParsedKey, Renderable } from "@opentui/core"
 import { createStore } from "solid-js/store"
 import { useKeyboard, useRenderer } from "@opentui/solid"
 import { createSimpleContext } from "./helper"
+import { canRestoreFocus } from "./keybind-focus"
 
 export const { use: useKeybind, provider: KeybindProvider } = createSimpleContext({
   name: "Keybind",
@@ -41,7 +42,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
       }
 
       if (!active) {
-        if (focus && !renderer.currentFocusedRenderable) {
+        if (canRestoreFocus(focus) && !renderer.currentFocusedRenderable) {
           focus.focus()
         }
         setStore("leader", false)
@@ -56,7 +57,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
 
       if (store.leader && evt.name) {
         setImmediate(() => {
-          if (focus && renderer.currentFocusedRenderable === focus) {
+          if (canRestoreFocus(focus) && renderer.currentFocusedRenderable === focus) {
             focus.focus()
           }
           leader(false)
